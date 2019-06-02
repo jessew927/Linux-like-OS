@@ -1,0 +1,25 @@
+﻿1. CP 1:
+   * Triple fault upon initializing paging
+      * Cause: loaded up cr3 register before enabling 4MB pages
+      * Fix: simply swapped the ordering of the assembly code
+1. CP 2:
+   * System freezed in the RTC_read function
+      * cause:        didn’t set IF flag to enable interrupt, which calls the handler to enable RTC_read to continue.
+   * Page fault upon file system initialization
+      * Cause: File system was being initialized after paging was initialized, so the code that gets the boot block address was causing the fault
+      * Fix: Got boot block address before paging initialization and passed it through file system initialization function after 
+1. CP 3:
+   * syscall_execute Page faults right after a call in the user mode program. Cause: Set user stack start address to be kernel stack address before context switching.
+   * neg_fd_read in syserr segfaults when returning from other processes. Cause: file descriptor range was not checked
+   * Syscalls randomly segfaults when outside of GDB stepping. Cause: common_isr didn’t save/restore registers correctly.
+1. CP 4:
+   * Grep/cat run successfully when supplied with no arguments. Cause: syscall_execute set argument to be empty string when no argument is supplied.
+1. CP 5:
+   * Two global variables represent the system’s RTC frequency aren’t synchronized.
+   * RTC_write would contaminate other process’ RTC frequency.
+      * Cause: didn’t recompute the frequency ratio between system RTC and each process’s RTC freq. after changing system RTC frequency.  
+   * Fish frames leak into other terminals
+      * Created three terminal backup buffers and set the pages to point to the scheduled terminal’s buffer
+         * Note: Did not create three new pages to solve this, which lead to the following bug
+   * Fish frames aren’t properly written to the backup buffers, so when we return to that terminal that the fish executes on after if finished, it displays the last frame we left on and not the actual last frame
+      * Fix: Created three new pages that follow the vidmap page consecutively. Use those pages as backup buffers to write to when the scheduled process is not in the displayed terminals
